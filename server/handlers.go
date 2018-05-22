@@ -1,8 +1,8 @@
 package server
 
 import (
-	"net/http"
 	"encoding/json"
+	"net/http"
 )
 
 func (s *server) HandlePost() func(w http.ResponseWriter, r *http.Request) {
