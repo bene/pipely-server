@@ -1,0 +1,7 @@
+.DS_Store
+.idea
+*.iws
+
+data/
+credentials.json
+entries.json
