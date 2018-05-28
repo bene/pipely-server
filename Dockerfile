@@ -6,8 +6,8 @@ WORKDIR /go/src/github.com/bene/wetube-server
 RUN go get
 RUN go install
 
-ENV HOST_DOMAIN=localhost
+ENV ADDRESS=:6550
 
-EXPOSE 8080
+EXPOSE 6550
 
 ENTRYPOINT /go/bin/wetube-server
