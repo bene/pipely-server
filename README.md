@@ -34,6 +34,7 @@ const eventSource = new EventSource('//localhost:6550/subscribe?channelId=CHANNE
 | CHANNEL_ID       | String      | Twelve characters long                                                                               | Yes      |
 | CHANNEL_PASSWORD | String      | Only needed if the channel has or should have a password                                             | No       |
 | CLIENT_ID        | String      | Must be at least three characters long and has to be unique in channel                               | Yes      |
+
 If a client connects to a non existent channel, the channel will be created, with or without a password, depending on the query. If the channel exists, the password has to be valid. When the last member of a channel disconnects, the channel will be destroyed by the server, and anyone can re-create it with a new password.
 
 ## Exchange data
