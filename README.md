@@ -12,7 +12,7 @@ In order to begin writing serverless connected apps you need to:
 
 ## Deploy a Pipely server
 
-In order to setup a Pipely server run:
+In order to setup a Pipely server run the following in a $GOPATH src/ directory:
 ```sh
 $ git clone git@github.com:bene/pipely-server.git
 $ cd pipely-server
@@ -55,18 +55,18 @@ curl -X POST \
 ```
 
 #### Request Headers:
-| Field            | Type        | Description                                 | Value                     |
-| ---------------- |:-----------:| ------------------------------------------- | ------------------------- |
-| Authorization    | String      | Needed if the channel has a password        | Password CHANNEL_PASSWORD |
-| Content-Type     | String      | Needed since the body is a JSON object this | application/json          |
+| Field            | Type        | Description                            | Value                     |
+| ---------------- |:-----------:| -------------------------------------- | ------------------------- |
+| Authorization    | String      | Needed if the channel has a password   | Password CHANNEL_PASSWORD |
+| Content-Type     | String      | Needed since the body is a JSON object | application/json          |
 
 #### Request Body:
-| Field            | Type        | Criteria                                                                                             |
-| ---------------- |:-----------:| ---------------------------------------------------------------------------------------------------- |
-| channel_id       | String      | Twelve characters long                                                                               |
-| type             | String      | Must be at lease on character long                                                                   |
-| origin_id        | String      | Must be at least three characters long, should either be 'server' or a client id by a channel member |
-| payload          | JSON Object | Must be a valid JSON object or can be undefined                                                      |
+| Field            | Type        | Criteria                                                                                              |
+| ---------------- |:-----------:| ----------------------------------------------------------------------------------------------------- |
+| channel_id       | String      | Twelve characters long                                                                                |
+| type             | String      | Must be at lease one character long                                                                   |
+| origin_id        | String      | Must be at least three characters long, should either be 'server' or a client id by a channel member  |
+| payload          | JSON Object | Must be a valid JSON object or can be undefined                                                       |
 
 To receive data the SSE clients have to manage incoming messages:
 ```javascript
@@ -79,5 +79,4 @@ eventSource.onmessage = (e) => {
 
     ...
 }
-
 ```

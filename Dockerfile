@@ -3,7 +3,8 @@ FROM golang
 ADD . /go/src/github.com/bene/wetube-server
 WORKDIR /go/src/github.com/bene/wetube-server
 
-RUN go get
+RUN go get -u github.com/golang/dep/...
+RUN dep ensure
 RUN go install
 
 ENV ADDRESS=:6550
