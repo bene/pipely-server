@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/bene/flowengine-api-sdk/middleware"
-	"github.com/bene/wetube-server/server"
+	"github.com/bene/pipely-server/server"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
