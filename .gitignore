@@ -1,6 +1,7 @@
 .DS_Store
 .idea
 *.iws
+vendor/
 
 data/
 credentials.json
