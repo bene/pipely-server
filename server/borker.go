@@ -19,7 +19,19 @@ type broker struct {
 	// Closed client connections
 	closingClients chan Client
 
-	channels map[string][]Client
+	channels map[string]*Channel
+}
+
+func (broker *broker) GetChannelSize() int {
+	return len(broker.channels)
+}
+
+func (broker *broker) GetClientSize() int {
+	var clients int
+	for _, c := range broker.channels {
+		clients += len(c.Clients)
+	}
+	return clients
 }
 
 func (broker *broker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -27,42 +39,54 @@ func (broker *broker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 
 	if !ok {
-		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+		http.Error(w, ErrorStreamingUnsupported.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	query := r.URL.Query()
 
-	if _, ok := query["channelId"]; !ok {
-		http.Error(w, "No channel specified!", http.StatusBadRequest)
+	var password string
+	var channelId string
+	var clientId string
+
+	if _, ok := query["channelId"]; !ok || len(query["channelId"][0]) != 12 {
+		http.Error(w, ErrorInvalidChannelId.Error(), http.StatusBadRequest)
 		return
 	} else {
-		if len(query["channelId"][0]) != 12 {
-			http.Error(w, "Invalid channel id!", http.StatusBadRequest)
-			return
-		}
+		channelId = query["channelId"][0]
 	}
 
-	if _, ok := query["clientId"]; !ok {
-		http.Error(w, "No client id specified!", http.StatusBadRequest)
+	if _, ok := query["clientId"]; !ok || len(query["clientId"][0]) < 3 {
+		http.Error(w, ErrorInvalidClientId.Error(), http.StatusBadRequest)
 		return
 	} else {
-		if len(query["clientId"][0]) < 3 {
-			http.Error(w, "Invalid client id! Id must not be shorter than three letters.", http.StatusBadRequest)
-			return
-		}
+		clientId = query["clientId"][0]
 	}
 
-	channelId := query["channelId"][0]
-	clientId := query["clientId"][0]
+	if _, ok := query["password"]; ok {
+		password = query["password"][0]
+	}
 
 	if c, ok := broker.channels[channelId]; ok {
 
-		for _, client := range c {
+		if len(c.Password) != 0 && password != c.Password {
+
+			http.Error(w, ErrorInvalidChannelPassword.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		for _, client := range c.Clients {
 			if strings.EqualFold(client.ClientId, clientId) {
-				http.Error(w, "Invalid client id! Id already in use.", http.StatusBadRequest)
+				http.Error(w, ErrorClientIdAlreadyUsed.Error(), http.StatusBadRequest)
 				return
 			}
+		}
+
+	} else {
+		broker.channels[channelId] = &Channel{
+			channelId,
+			password,
+			[]Client{},
 		}
 	}
 
@@ -107,13 +131,14 @@ func (broker *broker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Fprintf(w, "data: %s\n\n", msg)
 
-		// Flush the data immediatly instead of buffering it for later.
+		// Flush the data immediately instead of buffering it for later.
 		flusher.Flush()
 	}
 
 }
 
 func (broker *broker) listen() {
+
 	for {
 		select {
 		case client := <-broker.newClients:
@@ -124,62 +149,54 @@ func (broker *broker) listen() {
 			if c, ok := broker.channels[client.ChannelId]; ok {
 				broker.Notifier <- Event{
 					client.ChannelId,
-					"CONNECT",
+					Connect,
 					client.ClientId,
 					nil,
 				}
-				broker.channels[client.ChannelId] = append(c, client)
+				c.Clients = append(c.Clients, client)
 
 				var clients []string
 
-				for _, clientInChannel := range c {
+				for _, clientInChannel := range c.Clients {
 					clients = append(clients, clientInChannel.ClientId)
 				}
 				client.Channel <- Event{
 					client.ChannelId,
-					"CLIENT_LIST",
+					ClientList,
 					"server",
 					clients,
 				}
 			} else {
-				broker.channels[client.ChannelId] = []Client{client}
-				client.Channel <- Event{
-					client.ChannelId,
-					"CLIENT_LIST",
-					"server",
-					[]string{client.ClientId},
-				}
+				log.Println(ErrorChannelDoesNotExist)
 			}
 
-			log.Printf("Client added. %d channels", len(broker.channels))
 		case client := <-broker.closingClients:
 
 			if c, ok := broker.channels[client.ChannelId]; ok {
 
-				for i, cl := range c {
+				for i, cl := range c.Clients {
 					if cl == client {
-						c = append(c[:i], c[i+1:]...)
+						c.Clients = append(c.Clients[:i], c.Clients[i+1:]...)
 					}
 				}
 
-				if len(c) == 0 {
+				if len(c.Clients) == 0 {
 					delete(broker.channels, client.ChannelId)
 				} else {
 					broker.channels[client.ChannelId] = c
 					broker.Notifier <- Event{
 						client.ChannelId,
-						"DISCONNECT",
+						Disconnect,
 						client.ClientId,
 						nil,
 					}
 				}
 			}
 
-			log.Printf("Client removed. %d channels", len(broker.channels))
 		case event := <-broker.Notifier:
 
 			if c, ok := broker.channels[event.ChannelId]; ok {
-				for _, client := range c {
+				for _, client := range c.Clients {
 					client.Channel <- event
 				}
 			}

@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func (s *server) HandlePost() func(w http.ResponseWriter, r *http.Request) {
+func (s *server) CreateHandlerPublish() func(w http.ResponseWriter, r *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
